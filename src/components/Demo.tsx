@@ -20,12 +20,11 @@ import {
   useSwitchChain,
   useChainId,
 } from "wagmi";
-
 import { config } from "~/components/providers/WagmiProvider";
 import { Button } from "~/components/ui/Button";
 import { truncateAddress } from "~/lib/truncateAddress";
-import { base, degen, mainnet, optimism, unichain } from "wagmi/chains";
-import { BaseError, UserRejectedRequestError } from "viem";
+import { baseSepolia, base, degen, mainnet, sepolia } from "wagmi/chains";
+import { BaseError, parseEther, UserRejectedRequestError } from "viem";
 import { useSession } from "next-auth/react";
 import { createStore } from "mipd";
 import { Label } from "~/components/ui/label";
@@ -46,6 +45,8 @@ export default function Demo(
 
   const [addFrameResult, setAddFrameResult] = useState("");
   const [sendNotificationResult, setSendNotificationResult] = useState("");
+
+  const [receipientAddress, setReceipientAddress] = useState<`0x${string}` | null>(null);
 
   useEffect(() => {
     setNotificationDetails(context?.client.notificationDetails ?? null);
@@ -83,23 +84,9 @@ export default function Demo(
     isPending: isSwitchChainPending,
   } = useSwitchChain();
 
-  const nextChain = useMemo(() => {
-    if (chainId === base.id) {
-      return optimism;
-    } else if (chainId === optimism.id) {
-      return degen;
-    } else if (chainId === degen.id) {
-      return mainnet;
-    } else if (chainId === mainnet.id) {
-      return unichain;
-    } else {
-      return base;
-    }
-  }, [chainId]);
-
-  const handleSwitchChain = useCallback(() => {
-    switchChain({ chainId: nextChain.id });
-  }, [switchChain, nextChain.id]);
+  const handleSwitchChain = useCallback((chainId: number) => {
+    switchChain({ chainId });
+  }, [switchChain]);
 
   useEffect(() => {
     const load = async () => {
@@ -293,9 +280,8 @@ export default function Demo(
             className="flex items-center gap-2 transition-colors"
           >
             <span
-              className={`transform transition-transform ${
-                isContextOpen ? "rotate-90" : ""
-              }`}
+              className={`transform transition-transform ${isContextOpen ? "rotate-90" : ""
+                }`}
             >
               ➤
             </span>
@@ -304,19 +290,19 @@ export default function Demo(
 
           {isContextOpen && (
             <div className="p-4 mt-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] overflow-x-">
+              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] text-gray-900 overflow-x-">
                 {JSON.stringify(context, null, 2)}
               </pre>
             </div>
           )}
         </div>
 
-        <div>
+        {/* <div>
           <h2 className="font-2xl font-bold">Actions</h2>
 
           <div className="mb-4">
             <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg my-2">
-              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] overflow-x-">
+              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] text-gray-900 overflow-x-">
                 sdk.actions.signIn
               </pre>
             </div>
@@ -325,7 +311,7 @@ export default function Demo(
 
           <div className="mb-4">
             <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg my-2">
-              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] overflow-x-">
+              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] text-gray-900 overflow-x-">
                 sdk.actions.openUrl
               </pre>
             </div>
@@ -334,7 +320,7 @@ export default function Demo(
 
           <div className="mb-4">
             <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg my-2">
-              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] overflow-x-">
+              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] text-gray-900 overflow-x-">
                 sdk.actions.openUrl
               </pre>
             </div>
@@ -343,7 +329,7 @@ export default function Demo(
 
           <div className="mb-4">
             <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg my-2">
-              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] overflow-x-">
+              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] text-gray-900 overflow-x-">
                 sdk.actions.viewProfile
               </pre>
             </div>
@@ -352,7 +338,7 @@ export default function Demo(
 
           <div className="mb-4">
             <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg my-2">
-              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] overflow-x-">
+              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] text-gray-900 overflow-x-">
                 sdk.actions.close
               </pre>
             </div>
@@ -364,7 +350,7 @@ export default function Demo(
           <h2 className="font-2xl font-bold">Last event</h2>
 
           <div className="p-4 mt-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] overflow-x-">
+            <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] text-gray-900 overflow-x-">
               {lastEvent || "none"}
             </pre>
           </div>
@@ -383,7 +369,7 @@ export default function Demo(
 
           <div className="mb-4">
             <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg my-2">
-              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] overflow-x-">
+              <pre className="font-mono text-xs whitespace-pre-wrap break-words max-w-[260px] text-gray-900 overflow-x-">
                 sdk.actions.addFrame
               </pre>
             </div>
@@ -407,7 +393,9 @@ export default function Demo(
               Send notification
             </Button>
           </div>
-        </div>
+        </div> */}
+
+
 
         <div>
           <h2 className="font-2xl font-bold">Wallet</h2>
@@ -425,6 +413,47 @@ export default function Demo(
           )}
 
           <div className="mb-4">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={() => handleSwitchChain(sepolia.id)}
+                disabled={isSwitchChainPending}
+                isLoading={isSwitchChainPending}
+              >
+                Switch to {sepolia.name}
+              </Button>
+              <Button
+                onClick={() => handleSwitchChain(sepolia.id)}
+                disabled={isSwitchChainPending}
+                isLoading={isSwitchChainPending}
+              >
+                Switch to {base.name}
+              </Button>
+              <Button
+                onClick={() => handleSwitchChain(degen.id)}
+                disabled={isSwitchChainPending}
+                isLoading={isSwitchChainPending}
+              >
+                Switch to {degen.name}
+              </Button>
+              <Button
+                onClick={() => handleSwitchChain(mainnet.id)}
+                disabled={isSwitchChainPending}
+                isLoading={isSwitchChainPending}
+              >
+                Switch to {mainnet.name}
+              </Button>
+              <Button
+                onClick={() => handleSwitchChain(baseSepolia.id)}
+                disabled={isSwitchChainPending}
+                isLoading={isSwitchChainPending}
+              >
+                Switch to {baseSepolia.name}
+              </Button>
+            </div>
+            {isSwitchChainError && renderError(switchChainError)}
+          </div>
+
+          <div className="mb-4">
             <Button
               onClick={() =>
                 isConnected
@@ -436,15 +465,18 @@ export default function Demo(
             </Button>
           </div>
 
+          {isConnected && (
+            <div className="mb-4">
+              <SendEth />
+            </div>
+          )}
+
           <div className="mb-4">
             <SignMessage />
           </div>
 
           {isConnected && (
             <>
-              <div className="mb-4">
-                <SendEth />
-              </div>
               <div className="mb-4">
                 <Button
                   onClick={sendTx}
@@ -462,8 +494,8 @@ export default function Demo(
                       {isConfirming
                         ? "Confirming..."
                         : isConfirmed
-                        ? "Confirmed!"
-                        : "Pending"}
+                          ? "Confirmed!"
+                          : "Pending"}
                     </div>
                   </div>
                 )}
@@ -477,16 +509,6 @@ export default function Demo(
                   Sign Typed Data
                 </Button>
                 {isSignTypedError && renderError(signTypedError)}
-              </div>
-              <div className="mb-4">
-                <Button
-                  onClick={handleSwitchChain}
-                  disabled={isSwitchChainPending}
-                  isLoading={isSwitchChainPending}
-                >
-                  Switch to {nextChain.name}
-                </Button>
-                {isSwitchChainError && renderError(switchChainError)}
               </div>
             </>
           )}
@@ -510,7 +532,7 @@ function SignMessage() {
   const handleSignMessage = useCallback(async () => {
     if (!isConnected) {
       await connectAsync({
-        chainId: base.id,
+        chainId: sepolia.id,
         connector: config.connectors[0],
       });
     }
@@ -538,7 +560,9 @@ function SignMessage() {
 }
 
 function SendEth() {
-  const { isConnected, chainId } = useAccount();
+  const { isConnected } = useAccount();
+  const [toAddr, setToAddr] = useState<string>('0x33c97Dfb0497538e4c600445E7167EE670fd0B5b');
+  const [amount, setAmount] = useState<string>('0.001');
   const {
     sendTransaction,
     data,
@@ -552,22 +576,41 @@ function SendEth() {
       hash: data,
     });
 
-  const toAddr = useMemo(() => {
-    // Protocol guild address
-    return chainId === base.id
-      ? "0x32e3C7fD24e175701A35c224f2238d18439C7dBC"
-      : "0xB3d8d7887693a9852734b4D25e9C0Bb35Ba8a830";
-  }, [chainId]);
-
   const handleSend = useCallback(() => {
     sendTransaction({
-      to: toAddr,
-      value: 1n,
+      to: toAddr as `0x${string}`,
+      value: parseEther(amount),
     });
-  }, [toAddr, sendTransaction]);
+  }, [toAddr, amount, sendTransaction]);
 
   return (
     <>
+      <Label
+        className="text-xs font-semibold text-gray-500 mb-1"
+        htmlFor="to-addr"
+      >
+        To Address
+      </Label>
+      <Input
+        className="mb-2 !text-gray-900 dark:!text-gray-900"
+        type="text"
+        value={toAddr}
+        onChange={(e) => setToAddr(e.target.value)}
+        placeholder="To Address"
+      />
+      <Label
+        className="text-xs font-semibold text-gray-500 mb-1"
+        htmlFor="to-addr"
+      >
+        Amount
+      </Label>
+      <Input
+        className="mb-2 !text-gray-900 dark:!text-gray-900"
+        type="number"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        placeholder="Amount"
+      />
       <Button
         onClick={handleSend}
         disabled={!isConnected || isSendTxPending}
@@ -584,8 +627,8 @@ function SendEth() {
             {isConfirming
               ? "Confirming..."
               : isConfirmed
-              ? "Confirmed!"
-              : "Pending"}
+                ? "Confirmed!"
+                : "Pending"}
           </div>
         </div>
       )}
